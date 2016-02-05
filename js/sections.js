@@ -68,7 +68,7 @@ var fullCanvas = d3.select("#TEST")
 
 
 
-var scrollVis = function (dataMap) {
+var scrollVis = function (dataMap, rateTSV) {
 
 
 var margin = {top: 10, left: 90, bottom: 40, rigth: 150};
@@ -77,19 +77,24 @@ var margin = {top: 10, left: 90, bottom: 40, rigth: 150};
   var height = 500;
 
 
+  var quantize = d3.scale.quantize()
+          .range([0, 50, 100, 150, 200, 255]);
+
+
+
   // D3 MapSetup
-      var projection = d3.geo.albersUsa()
-          .scale(800)
-          .translate([width / 2, height / 2]);
+      // var projection = d3.geo.albersUsa()
+      //     .scale(800)
+      //     .translate([width / 2, height / 2]);
 
-      var path = d3.geo.path()
-          .projection(projection);
+      // var path = d3.geo.path()
+      //     .projection(projection);
 
-      var donorsRating = d3.map();
+      // var donorsRating = d3.map();
 
-      var quantize = d3.scale.quantize()
-          .domain([0, 100000])
-          .range([0, 10, 20, 30, 40, 50]);
+      // var quantize = d3.scale.quantize()
+      //     .domain([0, 1000000])
+      //     .range([0, 10, 20, 30, 40, 50]);
 
 
 
@@ -142,11 +147,17 @@ var margin = {top: 10, left: 90, bottom: 40, rigth: 150};
 
 //   // D3 Map
 // Projections
-  var donorsRating = d3.map();
+  var donorsRating = d3.map(rateTSV, function (d) { return d.id});
 
-  var quantize = d3.scale.quantize()
-          .domain([0, .15])
-          .range(d3.range(9).map(function(i) { return "q" + i + "-9"; }));
+  console.log(rateTSV);
+
+  var quantizeCarson = d3.scale.quantize()
+      .domain([0, 270000])
+      .range([0, 50, 100, 150, 200, 255]);
+
+  var quantizeBush = d3.scale.quantize()
+      .domain([0, 1510000])
+      .range([0, 50, 100, 150, 200, 255]);
 
 
   var projection = d3.geo.albersUsa()
@@ -182,12 +193,14 @@ var margin = {top: 10, left: 90, bottom: 40, rigth: 150};
 
       var EcoData = getData(dataCharts);
       var MapData = jsonData(dataMap);
+      var MapTSVData = tsvData(rateTSV);
+
 
       console.log(EcoData);
       console.log(MapData);
 
       // Call setupVis and setupSections functions here
-        setupVis(EcoData, MapData);
+        setupVis(EcoData, MapData, MapTSVData);
         setupSections();
       // comment out to see sections again
 
@@ -199,20 +212,26 @@ var margin = {top: 10, left: 90, bottom: 40, rigth: 150};
   var setupVis = function (EcoData, us) {
 
 
+  quantize.domain([0, 60000])
+
+
   // d3Map
   var d3map = g
     .append("g")
-    .attr("class", "counties")
     .selectAll("path")
     .data(
       topojson.feature(us[0], us[0].objects.counties).features
     )
-    .enter()
+
+      console.log(topojson.feature(us[0], us[0].objects.counties).features);
+
+  d3map.enter()
     .append("path")
+    .attr("class", "counties")
     .style("stroke", "none")
-    .attr("fill", function (d) {return "rgb("+ (quantize(donorsRating.get(d.id)) * 20) +", 0, 0)"})
+    .attr("fill", "#fff")
     .attr("d", path)
-    .attr("opacity", 0);
+    .attr("opacity", 1);
 
 
 
@@ -371,10 +390,15 @@ var scatter = g.selectAll(".scatterplot").data(EcoData);
     activateFunctions[6] = showChart4;
     activateFunctions[7] = showChart5;
     activateFunctions[8] = d3Map;
+    activateFunctions[9] = d3Map2;
+    activateFunctions[10] = d3Map3;
 
 
 
-    for(var i = 0; i < 9; i++) {
+
+
+
+    for(var i = 0; i < 11; i++) {
               updateFunctions[i] = function() {};
               }
 
@@ -766,6 +790,13 @@ var scatter = g.selectAll(".scatterplot").data(EcoData);
           })
       .attr("opacity", 1);
 
+
+  // d3Map Hide
+    // g.selectAll(".counties")
+    //   .transition()
+    //   .duration(100)
+    //   .attr("opacity", 0.1);
+
 }
 
   function d3Map () {
@@ -773,7 +804,8 @@ var scatter = g.selectAll(".scatterplot").data(EcoData);
 // d3Map Show
     g.selectAll(".counties")
       .transition()
-      .duration(100)
+      .duration(200)
+      .attr("fill", "none")
       .attr("opacity", 1);
 
 
@@ -795,9 +827,37 @@ var scatter = g.selectAll(".scatterplot").data(EcoData);
 
   }
 
+  function d3Map2() {
+
+    // #test
+    g.selectAll("path.counties")
+      .transition()
+      .duration(1000)
+      .attr("fill", function (d) {return "rgb("+ (quantize(+donorsRating.get(d.id).pop2014)) +", 0, 0)"})
+      .attr("opacity", 1);
+
+  }
+
+  function d3Map3() {
+
+    // #test
+    g.selectAll("path.counties")
+      .transition()
+      .duration(1000)
+      .attr("fill", function (d) {return "rgb("+ (quantizeBush(+donorsRating.get(d.id).Bush_donations)) +", 0, 0)"})
+      .attr("opacity", 1);
+  }
+
+
+
+
 
   function jsonData(dataMap) {
     return dataMap;
+  }
+
+  function tsvData(rateTSV) {
+    return rateTSV;
   }
 
 
@@ -879,14 +939,14 @@ var scatter = g.selectAll(".scatterplot").data(EcoData);
 
 
 
-function display(error, dataCharts, dataMap) {
+function display(error, dataCharts, dataMap, rateTSV) {
   console.log(error);
 
 
 // How to insert data for data Map too?
-  var plot = scrollVis(dataMap);
+  var plot = scrollVis(dataMap, rateTSV);
   d3.select("#vis")
-    .datum(dataCharts, dataMap)
+    .datum(dataCharts)
     .call(plot);
 
   // setup scroll functionality
@@ -945,10 +1005,3 @@ queue()
     .defer(d3.tsv, "data/data_final.tsv")
     .await(display);
 
-
-// loading the data
-// d3.csv("data/datadummy2.csv", display);
-// d3.jsonp("http://cdn.static-economist.com/sites/default/files/external/minerva_assets/ec-USLand/usp.json?callback=d3.jsonp.paint&x=" + x, display);
-// d3.tsv("data/rate.tsv", display);
-
-// console.log(us)
